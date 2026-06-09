@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Windows;
 using EngravingStation.App.Commands;
 using EngravingStation.Cad;
 using EngravingStation.Core.Exceptions;
@@ -23,7 +22,7 @@ public sealed class MainViewModel : ViewModelBase
     private readonly FixedSlotLayoutService _layoutService = new();
     private readonly ICadAdapter _cadAdapter;
     private readonly CsvBatchImporter _csvBatchImporter = new();
-    private BatchValidator _batchValidator;
+    private readonly BatchValidator _batchValidator;
     private OperationResult _latestValidation = new();
     private decimal _boardWidthMm = BoardDefinition.Default.WidthMm;
     private decimal _boardHeightMm = BoardDefinition.Default.HeightMm;
@@ -44,20 +43,44 @@ public sealed class MainViewModel : ViewModelBase
     {
         _batchValidator = batchValidator;
         _cadAdapter = cadAdapter;
-        ImportCsvCommand = new AsyncRelayCommand(ImportCsvAsync, () => State == BatchState.Draft);
-        AddScanCommand = new RelayCommand(AddScan, () => State == BatchState.Draft);
-        ValidateBatchCommand = new AsyncRelayCommand(ValidateBatchAsync, () => State is BatchState.Draft or BatchState.Validating);
-        GenerateLayoutCommand = new RelayCommand(GenerateLayout, () => State == BatchState.ReadyToLayout);
-        ConfirmLayoutCommand = new RelayCommand(ConfirmLayout, () => State == BatchState.LayoutGenerated);
-        ImportToCadCommand = new AsyncRelayCommand(ImportToCadAsync, () => State == BatchState.LayoutConfirmed);
-        FinalOperatorApprovalCommand = new RelayCommand(FinalOperatorApproval, () => State == BatchState.ImportedToCad && MaterialsChecked && PreviewChecked && MachineReadyChecked);
+        ImportCsvCommand = new AsyncRelayCommand(ImportCsvAsync, () => CanImportCsv);
+        AddScanCommand = new RelayCommand(AddScan, () => CanAddScan);
+        ValidateBatchCommand = new AsyncRelayCommand(ValidateBatchAsync, () => CanValidateBatch);
+        GenerateLayoutCommand = new RelayCommand(GenerateLayout, () => CanGenerateLayout);
+        ConfirmLayoutCommand = new RelayCommand(ConfirmLayout, () => CanConfirmLayout);
+        ImportToCadCommand = new AsyncRelayCommand(ImportToCadAsync, () => CanImportToCad);
+        FinalOperatorApprovalCommand = new RelayCommand(FinalOperatorApproval, () => CanFinalOperatorApproval);
         ClearBatchCommand = new RelayCommand(ClearBatch);
     }
 
     public ObservableCollection<BatchItemViewModel> QueueItems { get; } = [];
     public ObservableCollection<PreviewSlotViewModel> PreviewSlots { get; } = [];
     public ObservableCollection<PreviewCellViewModel> PreviewCells { get; } = [];
+    public ObservableCollection<IssueViewModel> ErrorItems { get; } = [];
     public BatchState State => _batch.State;
+    public string StateDescription => State switch
+    {
+        BatchState.Draft => "Add scans or import a CSV, then validate the queue.",
+        BatchState.Validating => "Validation is running against order rules and asset mappings.",
+        BatchState.ReadyToLayout => "Validation passed. Generate a board layout preview.",
+        BatchState.LayoutGenerated => "Review the preview and manually confirm the layout.",
+        BatchState.LayoutConfirmed => "Layout is confirmed. CAD import is enabled.",
+        BatchState.ImportingToCad => "CAD import is in progress.",
+        BatchState.ImportedToCad => "CAD import is complete. Complete the final operator checklist.",
+        BatchState.OperatorApproved => "Operator approval recorded.",
+        BatchState.Completed => "Batch is complete. No machine start command was sent.",
+        _ => string.Empty
+    };
+    public bool CanImportCsv => State == BatchState.Draft;
+    public bool CanAddScan => State == BatchState.Draft;
+    public bool CanValidateBatch => State == BatchState.Draft;
+    public bool CanGenerateLayout => State == BatchState.ReadyToLayout;
+    public bool CanConfirmLayout => State == BatchState.LayoutGenerated;
+    public bool CanImportToCad => State == BatchState.LayoutConfirmed;
+    public bool IsFinalChecklistEnabled => State == BatchState.ImportedToCad;
+    public bool CanFinalOperatorApproval => IsFinalChecklistEnabled && MaterialsChecked && PreviewChecked && MachineReadyChecked;
+    public bool CanEditBatch => State == BatchState.Draft;
+    public bool CanEditBoard => State is BatchState.Draft or BatchState.ReadyToLayout;
     public string ScanInput { get => _scanInput; set { _scanInput = value; OnPropertyChanged(); } }
     public string StatusMessage { get => _statusMessage; private set { _statusMessage = value; OnPropertyChanged(); } }
     public string DetailMessage { get => _detailMessage; private set { _detailMessage = value; OnPropertyChanged(); } }
@@ -83,9 +106,44 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
-    public bool MaterialsChecked { get => _materialsChecked; set { _materialsChecked = value; _batch.MaterialsChecked = value; OnPropertyChanged(); RaiseCanExecuteChanged(); } }
-    public bool PreviewChecked { get => _previewChecked; set { _previewChecked = value; _batch.PreviewChecked = value; OnPropertyChanged(); RaiseCanExecuteChanged(); } }
-    public bool MachineReadyChecked { get => _machineReadyChecked; set { _machineReadyChecked = value; _batch.MachineReadyChecked = value; OnPropertyChanged(); RaiseCanExecuteChanged(); } }
+    public bool MaterialsChecked
+    {
+        get => _materialsChecked;
+        set
+        {
+            _materialsChecked = value;
+            _batch.MaterialsChecked = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanFinalOperatorApproval));
+            RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool PreviewChecked
+    {
+        get => _previewChecked;
+        set
+        {
+            _previewChecked = value;
+            _batch.PreviewChecked = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanFinalOperatorApproval));
+            RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool MachineReadyChecked
+    {
+        get => _machineReadyChecked;
+        set
+        {
+            _machineReadyChecked = value;
+            _batch.MachineReadyChecked = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanFinalOperatorApproval));
+            RaiseCanExecuteChanged();
+        }
+    }
 
     public AsyncRelayCommand ImportCsvCommand { get; }
     public RelayCommand AddScanCommand { get; }
@@ -120,11 +178,7 @@ public sealed class MainViewModel : ViewModelBase
         try
         {
             var rows = await _csvBatchImporter.ImportAsync(dialog.FileName).ConfigureAwait(true);
-            _batch.Clear();
-            _latestValidation = new OperationResult();
-            QueueItems.Clear();
-            PreviewSlots.Clear();
-            PreviewCells.Clear();
+            ResetBatchCollections();
             foreach (var row in rows)
             {
                 _batch.AddItem(row);
@@ -132,10 +186,11 @@ public sealed class MainViewModel : ViewModelBase
             }
 
             StatusMessage = $"Imported {rows.Count} CSV batch rows. Validate the batch before layout.";
+            ClearIssues();
         }
         catch (CsvImportException exception)
         {
-            StatusMessage = exception.Message;
+            SetError("CSV_IMPORT_FAILURE", exception.Message);
         }
 
         RaiseStateChanged();
@@ -146,6 +201,7 @@ public sealed class MainViewModel : ViewModelBase
         AddBatchItem(ScanInput);
         ScanInput = string.Empty;
         StatusMessage = "Scan added. Validate the batch before layout.";
+        ClearIssues();
     }
 
     private void AddBatchItem(string rawInput)
@@ -160,16 +216,24 @@ public sealed class MainViewModel : ViewModelBase
     {
         try
         {
-            _batch.State = BatchState.Validating;
+            _stateMachine.MoveNext(_batch);
             RaiseStateChanged();
             _latestValidation = await _batchValidator.ValidateAsync(_batch).ConfigureAwait(true);
-            _batch.State = _latestValidation.Succeeded ? BatchState.ReadyToLayout : BatchState.Draft;
+            if (_latestValidation.Succeeded)
+            {
+                _stateMachine.MoveNext(_batch, _latestValidation);
+            }
+            else
+            {
+                _batch.State = BatchState.Draft;
+            }
             RefreshQueue();
-            StatusMessage = _latestValidation.Succeeded ? "Batch is ready for layout." : string.Join(Environment.NewLine, _latestValidation.Issues.Select(issue => issue.Message));
+            SetIssues(_latestValidation.Issues);
+            StatusMessage = _latestValidation.Succeeded ? "Batch is ready for layout." : "Validation failed. Review the error panel before continuing.";
         }
         catch (EngravingStationException exception)
         {
-            StatusMessage = exception.Message;
+            SetError("VALIDATION_FAILURE", exception.Message);
         }
         finally
         {
@@ -179,29 +243,42 @@ public sealed class MainViewModel : ViewModelBase
 
     private void GenerateLayout()
     {
-        var layoutResult = _layoutService.Generate(_batch, CreateConfiguredBoard());
-        if (!layoutResult.Succeeded || layoutResult.Value is null)
+        try
         {
-            StatusMessage = string.Join(Environment.NewLine, layoutResult.Issues.Select(issue => issue.Message));
-            return;
+            BatchStateMachine.EnsureState(_batch, BatchState.ReadyToLayout);
+            ClearIssues();
+            var layoutResult = _layoutService.Generate(_batch, CreateConfiguredBoard());
+            if (!layoutResult.Succeeded || layoutResult.Value is null)
+            {
+                SetIssues(layoutResult.Issues);
+                StatusMessage = "Layout generation failed. Review the error panel before continuing.";
+                return;
+            }
+
+            _batch.Layout = layoutResult.Value;
+            _batch.LayoutManuallyConfirmed = false;
+            _stateMachine.MoveNext(_batch);
+            PreviewSlots.Clear();
+            PreviewCells.Clear();
+            foreach (var cell in layoutResult.Value.Cells)
+            {
+                PreviewCells.Add(new PreviewCellViewModel(cell));
+            }
+
+            foreach (var slot in layoutResult.Value.Slots)
+            {
+                PreviewSlots.Add(new PreviewSlotViewModel(slot));
+            }
+
+            RefreshQueue();
+            StatusMessage = "Layout generated. Manual confirmation is required before CAD import.";
+            ClearIssues();
+        }
+        catch (EngravingStationException exception)
+        {
+            SetError("LAYOUT_GENERATION_FAILURE", exception.Message);
         }
 
-        _batch.Layout = layoutResult.Value;
-        _batch.State = BatchState.LayoutGenerated;
-        PreviewSlots.Clear();
-        PreviewCells.Clear();
-        foreach (var cell in layoutResult.Value.Cells)
-        {
-            PreviewCells.Add(new PreviewCellViewModel(cell));
-        }
-
-        foreach (var slot in layoutResult.Value.Slots)
-        {
-            PreviewSlots.Add(new PreviewSlotViewModel(slot));
-        }
-
-        RefreshQueue();
-        StatusMessage = "Layout generated. Manual confirmation is required before CAD import.";
         RaiseStateChanged();
     }
 
@@ -219,7 +296,7 @@ public sealed class MainViewModel : ViewModelBase
         }
         catch (BatchStateException exception)
         {
-            StatusMessage = exception.Message;
+            SetError("LAYOUT_CONFIRMATION_BLOCKED", exception.Message);
         }
 
         RaiseStateChanged();
@@ -236,16 +313,25 @@ public sealed class MainViewModel : ViewModelBase
                 return;
             }
 
-            _batch.State = BatchState.ImportingToCad;
+            _stateMachine.MoveNext(_batch);
             RaiseStateChanged();
-            var result = await _cadAdapter.ImportLayoutAsync(_batch.Layout).ConfigureAwait(true);
-            _batch.State = result.Succeeded ? BatchState.ImportedToCad : BatchState.LayoutConfirmed;
-            StatusMessage = result.Succeeded ? "Layout imported to CAD files. Final operator checklist is required; engraving is not started." : string.Join(Environment.NewLine, result.Issues.Select(issue => issue.Message));
+            var cadImportResult = await _cadAdapter.ImportLayoutAsync(_batch.Layout).ConfigureAwait(true);
+            SetIssues(cadImportResult.Issues);
+            if (cadImportResult.Succeeded)
+            {
+                _stateMachine.MoveNext(_batch);
+                StatusMessage = "Layout imported to CAD files. Final operator checklist is required; engraving is not started.";
+            }
+            else
+            {
+                _batch.State = BatchState.LayoutConfirmed;
+                StatusMessage = "CAD import failed. Review the error panel before retrying.";
+            }
         }
         catch (EngravingStationException exception)
         {
             _batch.State = BatchState.LayoutConfirmed;
-            StatusMessage = exception.Message;
+            SetError("CAD_IMPORT_FAILURE", exception.Message);
         }
         finally
         {
@@ -258,12 +344,13 @@ public sealed class MainViewModel : ViewModelBase
         try
         {
             _stateMachine.FinalOperatorApproval(_batch);
-            _batch.State = BatchState.Completed;
+            _stateMachine.MoveNext(_batch);
             StatusMessage = "Operator approved and batch marked completed. No machine start command was sent.";
+            ClearIssues();
         }
         catch (BatchStateException exception)
         {
-            StatusMessage = exception.Message;
+            SetError("FINAL_APPROVAL_BLOCKED", exception.Message);
         }
 
         RaiseStateChanged();
@@ -271,15 +358,47 @@ public sealed class MainViewModel : ViewModelBase
 
     private void ClearBatch()
     {
-        _batch.Clear();
-        QueueItems.Clear();
-        PreviewSlots.Clear();
-        PreviewCells.Clear();
+        ResetBatchCollections();
         MaterialsChecked = false;
         PreviewChecked = false;
         MachineReadyChecked = false;
+        DetailMessage = "No item selected.";
         StatusMessage = "Batch cleared.";
+        ClearIssues();
         RaiseStateChanged();
+    }
+
+    private void ResetBatchCollections()
+    {
+        _batch.Clear();
+        _latestValidation = new OperationResult();
+        QueueItems.Clear();
+        PreviewSlots.Clear();
+        PreviewCells.Clear();
+        ErrorItems.Clear();
+        SelectedItem = null;
+    }
+
+    private void SetIssues(IEnumerable<OperationIssue> issues)
+    {
+        ErrorItems.Clear();
+        foreach (var issue in issues)
+        {
+            ErrorItems.Add(new IssueViewModel(issue));
+        }
+    }
+
+    private void SetError(string code, string message)
+    {
+        var result = new OperationResult();
+        result.AddError(code, message);
+        SetIssues(result.Issues);
+        StatusMessage = message;
+    }
+
+    private void ClearIssues()
+    {
+        ErrorItems.Clear();
     }
 
     private void RefreshQueue()
@@ -288,11 +407,24 @@ public sealed class MainViewModel : ViewModelBase
         {
             item.Refresh();
         }
+
+        DetailMessage = SelectedItem?.Detail ?? DetailMessage;
     }
 
     private void RaiseStateChanged()
     {
         OnPropertyChanged(nameof(State));
+        OnPropertyChanged(nameof(StateDescription));
+        OnPropertyChanged(nameof(CanImportCsv));
+        OnPropertyChanged(nameof(CanAddScan));
+        OnPropertyChanged(nameof(CanValidateBatch));
+        OnPropertyChanged(nameof(CanGenerateLayout));
+        OnPropertyChanged(nameof(CanConfirmLayout));
+        OnPropertyChanged(nameof(CanImportToCad));
+        OnPropertyChanged(nameof(IsFinalChecklistEnabled));
+        OnPropertyChanged(nameof(CanFinalOperatorApproval));
+        OnPropertyChanged(nameof(CanEditBatch));
+        OnPropertyChanged(nameof(CanEditBoard));
         RaiseCanExecuteChanged();
     }
 

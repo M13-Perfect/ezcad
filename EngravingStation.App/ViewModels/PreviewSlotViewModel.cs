@@ -9,6 +9,8 @@ public sealed class PreviewSlotViewModel
     public PreviewSlotViewModel(LayoutSlot slot)
     {
         Code = slot.Code;
+        AssetPath = slot.AssetPath;
+        SlotLabel = $"R{slot.Row + 1} C{slot.Column + 1}";
         X = (double)(slot.Xmm * Scale);
         Y = (double)(slot.Ymm * Scale);
         Width = (double)(slot.WidthMm * Scale);
@@ -20,6 +22,8 @@ public sealed class PreviewSlotViewModel
     }
 
     public string Code { get; }
+    public string AssetPath { get; }
+    public string SlotLabel { get; }
     public double X { get; }
     public double Y { get; }
     public double Width { get; }
