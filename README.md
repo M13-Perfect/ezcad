@@ -2,6 +2,10 @@
 
 EngravingStation is an MVP Windows desktop application for batch laser engraving job preparation. It accepts scanner-like input or CSV mapping data, validates order codes, resolves matching artwork assets, generates a fixed-slot board layout preview, and exports CAD handoff files. It does **not** control or start a real laser engraving machine.
 
+## Documentation
+
+- Requirements and MVP workflow details are maintained in `docs/REQUIREMENTS.md`.
+
 ## Projects
 
 - `EngravingStation.App` - WPF MVVM desktop UI targeting `net10.0-windows`.
@@ -70,4 +74,3 @@ Publish x86:
 dotnet publish EngravingStation.App/EngravingStation.App.csproj --configuration Release --runtime win-x86 --self-contained true -p:PublishSingleFile=true
 ```
 
-GitHub Actions builds, tests, and publishes both Windows artifacts on pull requests and pushes to `main`.
