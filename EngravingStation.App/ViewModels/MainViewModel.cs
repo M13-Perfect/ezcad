@@ -25,6 +25,13 @@ public sealed class MainViewModel : ViewModelBase
     private readonly CsvBatchImporter _csvBatchImporter = new();
     private BatchValidator _batchValidator;
     private OperationResult _latestValidation = new();
+    private decimal _boardWidthMm = BoardDefinition.Default.WidthMm;
+    private decimal _boardHeightMm = BoardDefinition.Default.HeightMm;
+    private decimal _boardMarginMm = BoardDefinition.Default.MarginMm;
+    private decimal _slotWidthMm = BoardDefinition.Default.SlotWidthMm;
+    private decimal _slotHeightMm = BoardDefinition.Default.SlotHeightMm;
+    private int _slotColumns = BoardDefinition.Default.Columns;
+    private int _slotRows = BoardDefinition.Default.Rows;
     private string _scanInput = string.Empty;
     private string _statusMessage = "Draft batch ready.";
     private string _detailMessage = "No item selected.";
@@ -49,10 +56,21 @@ public sealed class MainViewModel : ViewModelBase
 
     public ObservableCollection<BatchItemViewModel> QueueItems { get; } = [];
     public ObservableCollection<PreviewSlotViewModel> PreviewSlots { get; } = [];
+    public ObservableCollection<PreviewCellViewModel> PreviewCells { get; } = [];
     public BatchState State => _batch.State;
     public string ScanInput { get => _scanInput; set { _scanInput = value; OnPropertyChanged(); } }
     public string StatusMessage { get => _statusMessage; private set { _statusMessage = value; OnPropertyChanged(); } }
     public string DetailMessage { get => _detailMessage; private set { _detailMessage = value; OnPropertyChanged(); } }
+    public decimal BoardWidthMm { get => _boardWidthMm; set { _boardWidthMm = value; OnPropertyChanged(); OnPropertyChanged(nameof(PreviewCanvasWidth)); } }
+    public decimal BoardHeightMm { get => _boardHeightMm; set { _boardHeightMm = value; OnPropertyChanged(); OnPropertyChanged(nameof(PreviewCanvasHeight)); } }
+    public decimal BoardMarginMm { get => _boardMarginMm; set { _boardMarginMm = value; OnPropertyChanged(); } }
+    public decimal SlotWidthMm { get => _slotWidthMm; set { _slotWidthMm = value; OnPropertyChanged(); } }
+    public decimal SlotHeightMm { get => _slotHeightMm; set { _slotHeightMm = value; OnPropertyChanged(); } }
+    public int SlotColumns { get => _slotColumns; set { _slotColumns = value; OnPropertyChanged(); } }
+    public int SlotRows { get => _slotRows; set { _slotRows = value; OnPropertyChanged(); } }
+    public double PreviewCanvasWidth => (double)(BoardWidthMm * PreviewSlotViewModel.Scale);
+    public double PreviewCanvasHeight => (double)(BoardHeightMm * PreviewSlotViewModel.Scale);
+
 
     public BatchItemViewModel? SelectedItem
     {
@@ -106,6 +124,7 @@ public sealed class MainViewModel : ViewModelBase
             _latestValidation = new OperationResult();
             QueueItems.Clear();
             PreviewSlots.Clear();
+            PreviewCells.Clear();
             foreach (var row in rows)
             {
                 _batch.AddItem(row);
@@ -160,7 +179,7 @@ public sealed class MainViewModel : ViewModelBase
 
     private void GenerateLayout()
     {
-        var layoutResult = _layoutService.Generate(_batch, BoardDefinition.Default);
+        var layoutResult = _layoutService.Generate(_batch, CreateConfiguredBoard());
         if (!layoutResult.Succeeded || layoutResult.Value is null)
         {
             StatusMessage = string.Join(Environment.NewLine, layoutResult.Issues.Select(issue => issue.Message));
@@ -170,6 +189,12 @@ public sealed class MainViewModel : ViewModelBase
         _batch.Layout = layoutResult.Value;
         _batch.State = BatchState.LayoutGenerated;
         PreviewSlots.Clear();
+        PreviewCells.Clear();
+        foreach (var cell in layoutResult.Value.Cells)
+        {
+            PreviewCells.Add(new PreviewCellViewModel(cell));
+        }
+
         foreach (var slot in layoutResult.Value.Slots)
         {
             PreviewSlots.Add(new PreviewSlotViewModel(slot));
@@ -178,6 +203,11 @@ public sealed class MainViewModel : ViewModelBase
         RefreshQueue();
         StatusMessage = "Layout generated. Manual confirmation is required before CAD import.";
         RaiseStateChanged();
+    }
+
+    private BoardDefinition CreateConfiguredBoard()
+    {
+        return new BoardDefinition(BoardWidthMm, BoardHeightMm, SlotWidthMm, SlotHeightMm, SlotColumns, SlotRows, BoardMarginMm);
     }
 
     private void ConfirmLayout()
@@ -244,6 +274,7 @@ public sealed class MainViewModel : ViewModelBase
         _batch.Clear();
         QueueItems.Clear();
         PreviewSlots.Clear();
+        PreviewCells.Clear();
         MaterialsChecked = false;
         PreviewChecked = false;
         MachineReadyChecked = false;
