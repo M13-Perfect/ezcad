@@ -32,6 +32,12 @@ Draft -> Validating -> ReadyToLayout -> LayoutGenerated -> LayoutConfirmed -> Im
 ```
 
 
+## WPF operator workflow
+
+The WPF UI is connected to the core batch state machine and exposes the MVP workflow as guarded commands. The queue panel shows every imported or scanned order with its validation/layout status, the board preview renders generated fixed-slot cells and placed assets, and the right-side operator panel separates selected-item detail, validation/import errors, and the final confirmation checklist.
+
+Buttons are enabled only for the current state: scans and CSV import are Draft-only, layout generation requires ReadyToLayout, CAD import requires LayoutConfirmed, and final approval requires ImportedToCad plus all checklist items. The checklist records manual operator confirmation only; it does not start engraving or send any machine-start command.
+
 ## Scanner input and order-code rules
 
 Scanner input is normalized before validation by trimming surrounding whitespace, removing scanner control characters such as CR/LF terminators, converting Unicode compatibility characters such as full-width letters and digits to ASCII, and uppercasing with invariant culture. Empty or whitespace-only scans remain empty and are rejected during validation.

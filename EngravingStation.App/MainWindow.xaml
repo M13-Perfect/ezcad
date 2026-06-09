@@ -1,26 +1,36 @@
 <Window x:Class="EngravingStation.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="EngravingStation" Height="760" Width="1180" MinHeight="640" MinWidth="980">
+        Title="EngravingStation" Height="760" Width="1220" MinHeight="680" MinWidth="1040">
     <DockPanel Background="#f8fafc">
         <Border DockPanel.Dock="Top" Background="#0f172a" Padding="12">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="EngravingStation" Foreground="White" FontSize="18" FontWeight="Bold" Margin="0,0,24,0" />
-                <TextBlock Text="State:" Foreground="#cbd5e1" FontWeight="SemiBold" Margin="0,0,6,0" />
-                <TextBlock Text="{Binding State}" Foreground="#fde68a" FontWeight="Bold" Margin="0,0,24,0" />
-                <TextBlock Text="{Binding StatusMessage}" Foreground="White" TextWrapping="Wrap" />
-            </StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="EngravingStation" Foreground="White" FontSize="18" FontWeight="Bold" Margin="0,0,24,0" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,24,0">
+                    <TextBlock Text="State:" Foreground="#cbd5e1" FontWeight="SemiBold" Margin="0,0,6,0" />
+                    <TextBlock Text="{Binding State}" Foreground="#fde68a" FontWeight="Bold" />
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="White" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding StateDescription}" Foreground="#cbd5e1" FontSize="12" TextWrapping="Wrap" Margin="0,3,0,0" />
+                </StackPanel>
+            </Grid>
         </Border>
 
         <Border DockPanel.Dock="Bottom" Background="#e2e8f0" Padding="10">
             <WrapPanel Orientation="Horizontal">
-                <Button Content="Import CSV" Command="{Binding ImportCsvCommand}" Margin="4" Padding="12,6" />
-                <TextBox Text="{Binding ScanInput, UpdateSourceTrigger=PropertyChanged}" Width="180" Margin="12,4,4,4" VerticalContentAlignment="Center" ToolTip="Scanner-like order code input" />
+                <Button Content="Import CSV" Command="{Binding ImportCsvCommand}" Margin="4" Padding="12,6" ToolTip="Enabled only while the batch is Draft." />
+                <TextBox Text="{Binding ScanInput, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditBatch}" Width="180" Margin="12,4,4,4" VerticalContentAlignment="Center" ToolTip="Scanner-like order code input" />
                 <Button Content="Add Scan" Command="{Binding AddScanCommand}" Margin="4" Padding="12,6" />
                 <Button Content="Validate Batch" Command="{Binding ValidateBatchCommand}" Margin="4" Padding="12,6" />
                 <Button Content="Generate Layout" Command="{Binding GenerateLayoutCommand}" Margin="4" Padding="12,6" />
-                <Button Content="Confirm Layout" Command="{Binding ConfirmLayoutCommand}" Margin="4" Padding="12,6" />
-                <Button Content="Import To CAD" Command="{Binding ImportToCadCommand}" Margin="4" Padding="12,6" />
+                <Button Content="Confirm Layout" Command="{Binding ConfirmLayoutCommand}" Margin="4" Padding="12,6" ToolTip="Manual confirmation is required before CAD import." />
+                <Button Content="Import To CAD" Command="{Binding ImportToCadCommand}" Margin="4" Padding="12,6" ToolTip="Imports layout files only; it never starts engraving." />
                 <Button Content="Final Operator Approval" Command="{Binding FinalOperatorApprovalCommand}" Margin="4" Padding="12,6" />
                 <Button Content="Clear Batch" Command="{Binding ClearBatchCommand}" Margin="4" Padding="12,6" />
             </WrapPanel>
@@ -28,19 +38,21 @@
 
         <Grid Margin="10">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="310" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="320" />
+                <ColumnDefinition Width="360" />
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" Background="White" BorderBrush="#cbd5e1" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,10,0">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Batch Queue" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
+                    <TextBlock DockPanel.Dock="Top" Text="Select an item to inspect its asset, slot, or validation error." Foreground="#64748b" TextWrapping="Wrap" Margin="0,0,0,8" />
                     <ListView ItemsSource="{Binding QueueItems}" SelectedItem="{Binding SelectedItem}" BorderThickness="0">
                         <ListView.View>
                             <GridView>
                                 <GridViewColumn Header="Code" DisplayMemberBinding="{Binding Code}" Width="110" />
                                 <GridViewColumn Header="Status" DisplayMemberBinding="{Binding Status}" Width="120" />
+                                <GridViewColumn Header="Slot" DisplayMemberBinding="{Binding SlotSummary}" Width="180" />
                             </GridView>
                         </ListView.View>
                     </ListView>
@@ -50,7 +62,7 @@
             <Border Grid.Column="1" Background="White" BorderBrush="#cbd5e1" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,10,0">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Board Preview" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
-                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8" IsEnabled="{Binding CanEditBoard}">
                         <TextBlock Text="Board W" VerticalAlignment="Center" Margin="0,0,4,0" />
                         <TextBox Text="{Binding BoardWidthMm, UpdateSourceTrigger=PropertyChanged}" Width="54" Margin="0,0,8,0" />
                         <TextBlock Text="H" VerticalAlignment="Center" Margin="0,0,4,0" />
@@ -69,10 +81,10 @@
                     <Viewbox Stretch="Uniform">
                         <Border Width="{Binding PreviewCanvasWidth}" Height="{Binding PreviewCanvasHeight}" Background="#fff" BorderBrush="#0f172a" BorderThickness="1">
                             <Grid>
-                                <ItemsControl ItemsSource="{Binding PreviewCells}">
+                                <ItemsControl ItemsSource="{Binding PreviewCells}" Width="{Binding PreviewCanvasWidth}" Height="{Binding PreviewCanvasHeight}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <Canvas Width="{Binding PreviewCanvasWidth}" Height="{Binding PreviewCanvasHeight}" />
+                                            <Canvas />
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemContainerStyle>
@@ -87,10 +99,10 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <ItemsControl ItemsSource="{Binding PreviewSlots}">
+                                <ItemsControl ItemsSource="{Binding PreviewSlots}" Width="{Binding PreviewCanvasWidth}" Height="{Binding PreviewCanvasHeight}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <Canvas Width="{Binding PreviewCanvasWidth}" Height="{Binding PreviewCanvasHeight}" />
+                                            <Canvas />
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemContainerStyle>
@@ -101,9 +113,12 @@
                                     </ItemsControl.ItemContainerStyle>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Width="{Binding Width}" Height="{Binding Height}">
+                                            <Grid Width="{Binding Width}" Height="{Binding Height}" ToolTip="{Binding AssetPath}">
                                                 <Rectangle Fill="#dbeafe" Stroke="#2563eb" StrokeThickness="1" />
-                                                <TextBlock Text="{Binding Code}" Margin="4" FontSize="10" Foreground="#1e3a8a" />
+                                                <StackPanel Margin="4">
+                                                    <TextBlock Text="{Binding Code}" FontSize="10" Foreground="#1e3a8a" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding SlotLabel}" FontSize="9" Foreground="#1e40af" />
+                                                </StackPanel>
                                             </Grid>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -115,15 +130,50 @@
             </Border>
 
             <Border Grid.Column="2" Background="White" BorderBrush="#cbd5e1" BorderThickness="1" CornerRadius="4" Padding="8">
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="Details / Errors" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
-                    <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+                <DockPanel LastChildFill="True">
+                    <TextBlock DockPanel.Dock="Top" Text="Details, Errors, and Confirmation" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
+
+                    <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0" IsEnabled="{Binding IsFinalChecklistEnabled}">
                         <TextBlock Text="Final approval checklist" FontWeight="Bold" Margin="0,0,0,6" />
+                        <TextBlock Text="Required only after CAD import. Checking these boxes records operator approval; it does not start engraving." Foreground="#64748b" TextWrapping="Wrap" Margin="0,0,0,6" />
                         <CheckBox Content="Materials match the job" IsChecked="{Binding MaterialsChecked}" Margin="0,3" />
                         <CheckBox Content="Preview matches expected layout" IsChecked="{Binding PreviewChecked}" Margin="0,3" />
                         <CheckBox Content="Machine is ready, but not auto-started" IsChecked="{Binding MachineReadyChecked}" Margin="0,3" />
                     </StackPanel>
-                    <TextBox Text="{Binding DetailMessage}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" BorderThickness="0" Background="#f8fafc" Padding="8" />
+
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="2*" />
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Background="#f8fafc" BorderBrush="#e2e8f0" BorderThickness="1" Padding="8" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="Selected item" FontWeight="Bold" Margin="0,0,0,6" />
+                                <TextBlock Text="{Binding SelectedItem.Code, TargetNullValue='No item selected'}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding SelectedItem.RawInput}" Foreground="#64748b" />
+                                <TextBlock Text="{Binding SelectedItem.Status}" Foreground="#334155" Margin="0,4,0,0" />
+                                <TextBlock Text="{Binding SelectedItem.AssetPath}" TextWrapping="Wrap" Foreground="#0369a1" Margin="0,4,0,0" />
+                                <TextBlock Text="{Binding SelectedItem.SlotSummary}" TextWrapping="Wrap" Foreground="#166534" Margin="0,4,0,0" />
+                                <TextBlock Text="{Binding SelectedItem.ErrorMessage}" TextWrapping="Wrap" Foreground="#b91c1c" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <GroupBox Grid.Row="1" Header="Detail message" Margin="0,0,0,8">
+                            <TextBox Text="{Binding DetailMessage}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" BorderThickness="0" Background="#f8fafc" Padding="8" />
+                        </GroupBox>
+
+                        <GroupBox Grid.Row="2" Header="Error panel">
+                            <ListBox ItemsSource="{Binding ErrorItems}" BorderThickness="0" Background="#fff7ed">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DisplayText}" TextWrapping="Wrap" Foreground="#9a3412" Margin="2" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </GroupBox>
+                    </Grid>
                 </DockPanel>
             </Border>
         </Grid>
