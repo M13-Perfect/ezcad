@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\EngravingStation.Core\EngravingStation.Core.csproj" />
+  </ItemGroup>
+</Project>

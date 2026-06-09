@@ -1,0 +1,4 @@
+order_no,tracking_no,asset_path,width_mm,height_mm,version
+ORD-1001,TRK000001,samples/assets/ord-1001.svg,30,20,v1
+ORD-1002,TRK000002,samples/assets/ord-1002.svg,35,25,v1
+ORD-1003,TRK000003,samples/assets/ord-1003.svg,40,30,v2
