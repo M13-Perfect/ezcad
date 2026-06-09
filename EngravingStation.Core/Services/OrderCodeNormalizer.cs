@@ -5,7 +5,7 @@ namespace EngravingStation.Core.Services;
 
 public sealed class OrderCodeNormalizer
 {
-    public string Normalize(string input)
+    public string Normalize(string? input)
     {
         if (string.IsNullOrWhiteSpace(input))
         {

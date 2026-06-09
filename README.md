@@ -31,6 +31,13 @@ Required batch state flow:
 Draft -> Validating -> ReadyToLayout -> LayoutGenerated -> LayoutConfirmed -> ImportingToCad -> ImportedToCad -> OperatorApproved -> Completed
 ```
 
+
+## Scanner input and order-code rules
+
+Scanner input is normalized before validation by trimming surrounding whitespace, removing scanner control characters such as CR/LF terminators, converting Unicode compatibility characters such as full-width letters and digits to ASCII, and uppercasing with invariant culture. Empty or whitespace-only scans remain empty and are rejected during validation.
+
+Order-code validation uses configurable regular-expression rules. The default MVP rules accept `ORD-` followed by at least four uppercase letters or digits, and `TRK` followed by at least six digits. Additional deployments can construct `OrderCodeValidator` with their own named `OrderCodeRule` entries without changing scan normalization.
+
 ## CSV mapping format
 
 The MVP mapping CSV uses this header:
