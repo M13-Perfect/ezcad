@@ -1,0 +1,86 @@
+name: Windows build, test, and publish
+
+'on':
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: 10.0.x
+  SOLUTION: EngravingStation.sln
+  APP_PROJECT: EngravingStation.App/EngravingStation.App.csproj
+  CONFIGURATION: Release
+
+jobs:
+  build-test-publish:
+    name: Build, test, and publish Windows artifacts
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore $env:SOLUTION
+
+      - name: Build
+        run: dotnet build $env:SOLUTION --configuration $env:CONFIGURATION --no-restore
+
+      - name: Test
+        run: dotnet test $env:SOLUTION --configuration $env:CONFIGURATION --no-build --verbosity normal
+
+      - name: Publish self-contained win-x64
+        shell: pwsh
+        run: |
+          $runtime = 'win-x64'
+          $publishDir = Join-Path $env:GITHUB_WORKSPACE "artifacts/publish/$runtime"
+          dotnet publish $env:APP_PROJECT --configuration $env:CONFIGURATION --runtime $runtime --self-contained true -p:PublishSingleFile=true -p:PublishDir="$publishDir/"
+
+      - name: Zip win-x64 publish output
+        shell: pwsh
+        run: |
+          $runtime = 'win-x64'
+          $publishDir = Join-Path $env:GITHUB_WORKSPACE "artifacts/publish/$runtime"
+          $zipDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts/zip'
+          New-Item -ItemType Directory -Path $zipDir -Force | Out-Null
+          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath (Join-Path $zipDir "EngravingStation-$runtime.zip") -Force
+
+      - name: Publish self-contained win-x86
+        shell: pwsh
+        run: |
+          $runtime = 'win-x86'
+          $publishDir = Join-Path $env:GITHUB_WORKSPACE "artifacts/publish/$runtime"
+          dotnet publish $env:APP_PROJECT --configuration $env:CONFIGURATION --runtime $runtime --self-contained true -p:PublishSingleFile=true -p:PublishDir="$publishDir/"
+
+      - name: Zip win-x86 publish output
+        shell: pwsh
+        run: |
+          $runtime = 'win-x86'
+          $publishDir = Join-Path $env:GITHUB_WORKSPACE "artifacts/publish/$runtime"
+          $zipDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts/zip'
+          New-Item -ItemType Directory -Path $zipDir -Force | Out-Null
+          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath (Join-Path $zipDir "EngravingStation-$runtime.zip") -Force
+
+      - name: Upload win-x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EngravingStation-win-x64
+          path: artifacts/zip/EngravingStation-win-x64.zip
+          if-no-files-found: error
+
+      - name: Upload win-x86 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EngravingStation-win-x86
+          path: artifacts/zip/EngravingStation-win-x86.zip
+          if-no-files-found: error

@@ -92,15 +92,32 @@ dotnet test EngravingStation.sln
 
 ## Windows publishing
 
-Publish x64:
+The GitHub Actions workflow in `.github/workflows/windows-build-test-publish.yml` restores, builds, tests, publishes self-contained Windows packages for both supported runtime identifiers, zips each publish directory, and uploads the ZIP files as workflow artifacts:
 
-```bash
-dotnet publish EngravingStation.App/EngravingStation.App.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true
+- `EngravingStation-win-x64` - self-contained `win-x64` publish output for EzCAD3-style 64-bit environments.
+- `EngravingStation-win-x86` - self-contained `win-x86` publish output for EzCAD2-style 32-bit environments.
+
+Run the same publish commands locally from the repository root with the .NET 10 SDK installed.
+
+Publish and zip x64 from PowerShell:
+
+```powershell
+$runtime = 'win-x64'
+$publishDir = "artifacts/publish/$runtime"
+$zipDir = 'artifacts/zip'
+dotnet publish EngravingStation.App/EngravingStation.App.csproj --configuration Release --runtime $runtime --self-contained true -p:PublishSingleFile=true -p:PublishDir="$publishDir/"
+New-Item -ItemType Directory -Path $zipDir -Force | Out-Null
+Compress-Archive -Path "$publishDir/*" -DestinationPath "$zipDir/EngravingStation-$runtime.zip" -Force
 ```
 
-Publish x86:
+Publish and zip x86 from PowerShell:
 
-```bash
-dotnet publish EngravingStation.App/EngravingStation.App.csproj --configuration Release --runtime win-x86 --self-contained true -p:PublishSingleFile=true
+```powershell
+$runtime = 'win-x86'
+$publishDir = "artifacts/publish/$runtime"
+$zipDir = 'artifacts/zip'
+dotnet publish EngravingStation.App/EngravingStation.App.csproj --configuration Release --runtime $runtime --self-contained true -p:PublishSingleFile=true -p:PublishDir="$publishDir/"
+New-Item -ItemType Directory -Path $zipDir -Force | Out-Null
+Compress-Archive -Path "$publishDir/*" -DestinationPath "$zipDir/EngravingStation-$runtime.zip" -Force
 ```
 
