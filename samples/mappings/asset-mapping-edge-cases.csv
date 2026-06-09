@@ -1,0 +1,5 @@
+order_no,tracking_no,asset_path,width_mm,height_mm,version
+ORD-2001,TRK000201,samples/assets/missing.svg,30,20,v1
+ORD-2002,TRK000202,samples/assets/unsupported.bmp,30,20,v1
+ORD-2003,TRK000203,samples/assets/ord-1001.svg,30,20,v1
+ORD-2003,TRK000203,samples/assets/ord-1002.svg,30,20,v2
