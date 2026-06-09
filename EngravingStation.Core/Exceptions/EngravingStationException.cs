@@ -21,3 +21,9 @@ public sealed class RepositoryException : EngravingStationException
 {
     public RepositoryException(string message, Exception innerException) : base(message, innerException) { }
 }
+
+public sealed class CsvImportException : EngravingStationException
+{
+    public CsvImportException(string message) : base(message) { }
+    public CsvImportException(string message, Exception innerException) : base(message, innerException) { }
+}

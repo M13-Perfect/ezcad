@@ -22,7 +22,7 @@ public sealed class MainViewModel : ViewModelBase
     private readonly BatchStateMachine _stateMachine = new();
     private readonly FixedSlotLayoutService _layoutService = new();
     private readonly ICadAdapter _cadAdapter;
-    private readonly CsvMappingImporter _csvImporter = new();
+    private readonly CsvBatchImporter _csvBatchImporter = new();
     private BatchValidator _batchValidator;
     private OperationResult _latestValidation = new();
     private string _scanInput = string.Empty;
@@ -99,17 +99,26 @@ public sealed class MainViewModel : ViewModelBase
             return;
         }
 
-        var rows = await _csvImporter.ImportAsync(dialog.FileName).ConfigureAwait(true);
-        var repository = new InMemoryOrderAssetRepository(rows);
-        _batchValidator = new BatchValidator(OrderCodeValidator.Default, new AssetResolver(repository, new LocalFileSystem()));
-        _batch.Clear();
-        QueueItems.Clear();
-        foreach (var row in rows)
+        try
         {
-            AddBatchItem(row.OrderNo);
+            var rows = await _csvBatchImporter.ImportAsync(dialog.FileName).ConfigureAwait(true);
+            _batch.Clear();
+            _latestValidation = new OperationResult();
+            QueueItems.Clear();
+            PreviewSlots.Clear();
+            foreach (var row in rows)
+            {
+                _batch.AddItem(row);
+                QueueItems.Add(new BatchItemViewModel(row));
+            }
+
+            StatusMessage = $"Imported {rows.Count} CSV batch rows. Validate the batch before layout.";
+        }
+        catch (CsvImportException exception)
+        {
+            StatusMessage = exception.Message;
         }
 
-        StatusMessage = $"Imported {rows.Count} CSV mapping rows as batch items.";
         RaiseStateChanged();
     }
 

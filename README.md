@@ -1,6 +1,6 @@
 # EngravingStation
 
-EngravingStation is an MVP Windows desktop application for batch laser engraving job preparation. It accepts scanner-like input or CSV mapping data, validates order codes, resolves matching artwork assets, generates a fixed-slot board layout preview, and exports CAD handoff files. It does **not** control or start a real laser engraving machine.
+EngravingStation is an MVP Windows desktop application for batch laser engraving job preparation. It accepts scanner-like input, CSV batch rows, and CSV asset mapping data, validates order codes, resolves matching artwork assets, generates a fixed-slot board layout preview, and exports CAD handoff files. It does **not** control or start a real laser engraving machine.
 
 ## Documentation
 
@@ -38,7 +38,15 @@ Scanner input is normalized before validation by trimming surrounding whitespace
 
 Order-code validation uses configurable regular-expression rules. The default MVP rules accept `ORD-` followed by at least four uppercase letters or digits, and `TRK` followed by at least six digits. Additional deployments can construct `OrderCodeValidator` with their own named `OrderCodeRule` entries without changing scan normalization.
 
-## CSV mapping format
+## CSV batch and mapping formats
+
+Batch CSV files contain one order code per row using this header:
+
+```csv
+order_code
+```
+
+Sample batch files are included under `samples/batches/`, including a valid batch and a duplicate-code example. The UI **Import CSV** action imports batch rows and keeps asset resolution backed by the configured asset mapping repository.
 
 The MVP mapping CSV uses this header:
 
@@ -46,7 +54,7 @@ The MVP mapping CSV uses this header:
 order_no,tracking_no,asset_path,width_mm,height_mm,version
 ```
 
-A sample file is included at `samples/asset-mapping.csv` with sample SVG assets under `samples/assets/`.
+A sample file is included at `samples/asset-mapping.csv` with sample SVG assets under `samples/assets/`. Additional mapping examples under `samples/mappings/` exercise missing-file, unsupported-extension, and multiple-match validation paths.
 
 ## Layout-file CAD handoff
 
