@@ -50,29 +50,65 @@
             <Border Grid.Column="1" Background="White" BorderBrush="#cbd5e1" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,10,0">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Board Preview" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
+                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <TextBlock Text="Board W" VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <TextBox Text="{Binding BoardWidthMm, UpdateSourceTrigger=PropertyChanged}" Width="54" Margin="0,0,8,0" />
+                        <TextBlock Text="H" VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <TextBox Text="{Binding BoardHeightMm, UpdateSourceTrigger=PropertyChanged}" Width="54" Margin="0,0,8,0" />
+                        <TextBlock Text="Margin" VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <TextBox Text="{Binding BoardMarginMm, UpdateSourceTrigger=PropertyChanged}" Width="46" Margin="0,0,8,0" />
+                        <TextBlock Text="Slot W" VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <TextBox Text="{Binding SlotWidthMm, UpdateSourceTrigger=PropertyChanged}" Width="46" Margin="0,0,8,0" />
+                        <TextBlock Text="H" VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <TextBox Text="{Binding SlotHeightMm, UpdateSourceTrigger=PropertyChanged}" Width="46" Margin="0,0,8,0" />
+                        <TextBlock Text="Cols" VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <TextBox Text="{Binding SlotColumns, UpdateSourceTrigger=PropertyChanged}" Width="34" Margin="0,0,8,0" />
+                        <TextBlock Text="Rows" VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <TextBox Text="{Binding SlotRows, UpdateSourceTrigger=PropertyChanged}" Width="34" />
+                    </WrapPanel>
                     <Viewbox Stretch="Uniform">
-                        <Border Width="600" Height="400" Background="#fff" BorderBrush="#0f172a" BorderThickness="1">
-                            <ItemsControl ItemsSource="{Binding PreviewSlots}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <Canvas Width="600" Height="400" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemContainerStyle>
-                                    <Style TargetType="ContentPresenter">
-                                        <Setter Property="Canvas.Left" Value="{Binding X}" />
-                                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
-                                    </Style>
-                                </ItemsControl.ItemContainerStyle>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Width="{Binding Width}" Height="{Binding Height}">
-                                            <Rectangle Fill="#dbeafe" Stroke="#2563eb" StrokeThickness="1" />
-                                            <TextBlock Text="{Binding Code}" Margin="4" FontSize="10" Foreground="#1e3a8a" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                        <Border Width="{Binding PreviewCanvasWidth}" Height="{Binding PreviewCanvasHeight}" Background="#fff" BorderBrush="#0f172a" BorderThickness="1">
+                            <Grid>
+                                <ItemsControl ItemsSource="{Binding PreviewCells}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas Width="{Binding PreviewCanvasWidth}" Height="{Binding PreviewCanvasHeight}" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                            <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Rectangle Width="{Binding Width}" Height="{Binding Height}" Fill="#f8fafc" Stroke="#cbd5e1" StrokeThickness="1" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <ItemsControl ItemsSource="{Binding PreviewSlots}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas Width="{Binding PreviewCanvasWidth}" Height="{Binding PreviewCanvasHeight}" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                            <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Width="{Binding Width}" Height="{Binding Height}">
+                                                <Rectangle Fill="#dbeafe" Stroke="#2563eb" StrokeThickness="1" />
+                                                <TextBlock Text="{Binding Code}" Margin="4" FontSize="10" Foreground="#1e3a8a" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
                         </Border>
                     </Viewbox>
                 </DockPanel>

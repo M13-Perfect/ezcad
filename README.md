@@ -56,6 +56,15 @@ order_no,tracking_no,asset_path,width_mm,height_mm,version
 
 A sample file is included at `samples/asset-mapping.csv` with sample SVG assets under `samples/assets/`. Additional mapping examples under `samples/mappings/` exercise missing-file, unsupported-extension, and multiple-match validation paths.
 
+
+## Fixed-slot layout configuration
+
+The layout engine uses a configurable `BoardDefinition` with board width, board height, margin, slot width, slot height, column count, and row count in millimeters. The WPF board preview exposes these values before **Generate Layout**, and `FixedSlotLayoutService.Generate` accepts the same definition for tests or alternate deployments.
+
+Layout generation assigns valid assets to fixed slots in row-major order, centers each asset within its slot, and rejects invalid dimensions, grids that do not fit inside the configured board margin, batches that exceed slot capacity, assets that exceed a slot, and any detected item collisions. Preview data includes both slot-cell bounds and placed asset bounds so WPF can render the fixed grid and the actual asset footprint.
+
+For debugging, `LayoutFileCadAdapter` writes `layout-preview.svg` using the shared SVG renderer. The SVG shows the board, usable margin area, fixed slot cells, and placed asset rectangles; it remains a handoff/debug artifact and never starts engraving.
+
 ## Layout-file CAD handoff
 
 `LayoutFileCadAdapter` writes the CAD handoff to an output directory:
